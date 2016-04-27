@@ -1,0 +1,6 @@
+---
+- hosts: all
+  sudo: true
+  roles:
+    - { role: bridge, sudo: true }
+    - { role: jenkins, sudo: true }

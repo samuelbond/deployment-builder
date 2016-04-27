@@ -1,0 +1,80 @@
+---
+
+- name: Check bridge utils is installed
+  command: brctl show
+  register: bu_check
+  ignore_errors: true
+
+- name: Install bridge utils for Ubuntu
+  apt: name=bridge-utils update_cache=yes
+  sudo: yes
+  when: ansible_os_family == "Debian" and bu_check.rc != 0
+
+- name: Check docker bridge exist
+  command: bash -c "brctl show | grep docker0 | sed 's/\s.*//'"
+  register: dck_check
+  ignore_errors: true
+
+- name: Stop docker service
+  command: service docker stop
+  sudo: yes
+  ignore_errors: true
+  when: dck_check.stdout == "docker0"
+
+- name: Disable docker bridge
+  command: ip link set dev docker0 down
+  sudo: yes
+  ignore_errors: true
+  when: dck_check.stdout == "docker0"
+
+- name: Delete docker bridge
+  command: brctl delbr docker0
+  sudo: yes
+  ignore_errors: true
+  when: dck_check.stdout == "docker0"
+
+- name: Configure iptables
+  command: iptables -t nat -F POSTROUTING
+  sudo: yes
+  ignore_errors: true
+
+- name: Check network bridge exist
+  command: bash -c "brctl show | grep {{ bridge_name }} | sed 's/\s.*//'"
+  register: br_check
+  ignore_errors: true
+
+- name: Create network bridge
+  command: ip link add {{ bridge_name }} type bridge
+  when: br_check.stdout != "{{ bridge_name }}"
+
+- name: Add ip address to bridge
+  command: ip addr add {{ip_range}} dev {{ bridge_name }}
+  when: br_check.stdout != "{{ bridge_name }}"
+
+- name: Bring network bridge up
+  command: ip link set dev {{ bridge_name }} up
+
+- name: Tell docker about our bridge
+  lineinfile: dest=/etc/default/docker line="DOCKER_OPTS="-b={{bridge_name}}""
+  sudo: yes
+
+- name: Get bridge ip
+  command: bash -c "ifconfig | grep -A 3 "docker-br-01" | sed -n 2p | sed 's/Bcast.*//'| sed 's/^.*://'"
+  register: ip_ad
+
+- debug: msg="Bridge Ip Address is {{ ip_ad.stdout }}"
+
+- name: Masquerade NAT
+  command: iptables -t nat -L -n
+  sudo: yes
+  when: dck_check.stdout == "docker0"
+  register: masq
+
+- debug: msg=" {{ masq.stdout }}"
+  when: dck_check.stdout == "docker0"
+
+- name: Start docker service
+  command: service docker start
+  sudo: yes
+  ignore_errors: true
+  when: dck_check.stdout == "docker0"

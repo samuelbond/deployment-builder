@@ -1,0 +1,4 @@
+bridge_name: dbr01
+jenkins_volume: /var/jenkins
+hudson_footer_url: http://www.platitech.co.uk
+ip_range: 172.30.1.1/20

@@ -1,0 +1,11 @@
+---
+
+- name: Setup jenkins volume
+  file: path={{jenkins_volume}} state=directory owner=1000 mode=0755
+  sudo: yes
+
+- name: Create docker container
+  command: bash -c "docker run -p 8080:8080 -p 50000:50000 -v {{jenkins_volume}}  --env JAVA_OPTS=-Dhudson.footerURL={{hudson_footer_url}} jenkins"
+  sudo: yes
+
+
