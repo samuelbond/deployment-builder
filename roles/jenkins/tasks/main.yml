@@ -5,7 +5,5 @@
   sudo: yes
 
 - name: Create docker container
-  command: bash -c "docker run -p 8080:8080 -p 50000:50000 -v {{jenkins_volume}}  --env JAVA_OPTS=-Dhudson.footerURL={{hudson_footer_url}} jenkins"
+  command: bash -c "docker run -t -d -p 8080:8080 -p 50000:50000 -v {{jenkins_volume}}:/var/jenkins_home  --env JAVA_OPTS=-Dhudson.footerURL={{hudson_footer_url}} jenkins"
   sudo: yes
-
-
